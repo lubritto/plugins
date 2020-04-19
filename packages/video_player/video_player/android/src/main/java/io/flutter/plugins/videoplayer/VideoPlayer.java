@@ -9,6 +9,7 @@ import android.os.Build;
 import android.view.Surface;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.Player;
@@ -228,6 +229,12 @@ final class VideoPlayer {
 
   void setLooping(boolean value) {
     exoPlayer.setRepeatMode(value ? REPEAT_MODE_ALL : REPEAT_MODE_OFF);
+  }
+
+  void setSpeed(double value) {
+    float bracketedValue = (float) Math.max(0.0, Math.min(3.0, value));
+    PlaybackParameters param = new PlaybackParameters(bracketedValue);
+    exoPlayer.setPlaybackParameters(param);
   }
 
   void setVolume(double value) {

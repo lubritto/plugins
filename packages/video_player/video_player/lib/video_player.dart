@@ -6,15 +6,16 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
-
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+
+import 'src/closed_caption_file.dart';
+
 export 'package:video_player_platform_interface/video_player_platform_interface.dart'
     show DurationRange, DataSourceType, VideoFormat;
 
-import 'src/closed_caption_file.dart';
 export 'src/closed_caption_file.dart';
 
 final VideoPlayerPlatform _videoPlayerPlatform = VideoPlayerPlatform.instance
@@ -35,6 +36,7 @@ class VideoPlayerValue {
     this.buffered = const <DurationRange>[],
     this.isPlaying = false,
     this.isLooping = false,
+    this.speed = 1.0,
     this.isBuffering = false,
     this.volume = 1.0,
     this.errorDescription,
@@ -70,6 +72,9 @@ class VideoPlayerValue {
 
   /// True if the video is looping.
   final bool isLooping;
+
+  /// The current speed of the playback.
+  final double speed;
 
   /// True if the video is currently buffering.
   final bool isBuffering;
@@ -117,6 +122,7 @@ class VideoPlayerValue {
     List<DurationRange> buffered,
     bool isPlaying,
     bool isLooping,
+    bool speed,
     bool isBuffering,
     double volume,
     String errorDescription,
@@ -129,6 +135,7 @@ class VideoPlayerValue {
       buffered: buffered ?? this.buffered,
       isPlaying: isPlaying ?? this.isPlaying,
       isLooping: isLooping ?? this.isLooping,
+      speed: speed ?? this.speed,
       isBuffering: isBuffering ?? this.isBuffering,
       volume: volume ?? this.volume,
       errorDescription: errorDescription ?? this.errorDescription,
@@ -145,6 +152,7 @@ class VideoPlayerValue {
         'buffered: [${buffered.join(', ')}], '
         'isPlaying: $isPlaying, '
         'isLooping: $isLooping, '
+        'speed: $speed, '
         'isBuffering: $isBuffering'
         'volume: $volume, '
         'errorDescription: $errorDescription)';
@@ -279,6 +287,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
           );
           initializingCompleter.complete(null);
           _applyLooping();
+          _applySpeed();
           _applyVolume();
           _applyPlayPause();
           break;
@@ -355,6 +364,11 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
     await _applyLooping();
   }
 
+  Future<void> setSpeed(double speed) async {
+    value = value.copyWith(speed: speed);
+    await _applySpeed();
+  }
+
   /// Pauses the video.
   Future<void> pause() async {
     value = value.copyWith(isPlaying: false);
@@ -366,6 +380,13 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
       return;
     }
     await _videoPlayerPlatform.setLooping(_textureId, value.isLooping);
+  }
+
+  Future<void> _applySpeed() async {
+    if (!value.initialized || _isDisposed) {
+      return;
+    }
+    await _videoPlayerPlatform.setSpeed(_textureId, value.speed);
   }
 
   Future<void> _applyPlayPause() async {

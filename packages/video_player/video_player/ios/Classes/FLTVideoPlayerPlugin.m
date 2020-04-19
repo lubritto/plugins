@@ -44,11 +44,13 @@ int64_t FLTCMTimeToMillis(CMTime time) {
 @property(nonatomic, readonly) bool disposed;
 @property(nonatomic, readonly) bool isPlaying;
 @property(nonatomic) bool isLooping;
+@property(nonatomic) bool speed;
 @property(nonatomic, readonly) bool isInitialized;
 - (instancetype)initWithURL:(NSURL*)url frameUpdater:(FLTFrameUpdater*)frameUpdater;
 - (void)play;
 - (void)pause;
 - (void)setIsLooping:(bool)isLooping;
+- (void)setSpeed:(double)speed;
 - (void)updatePlayingState;
 @end
 
@@ -354,6 +356,10 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
   _isLooping = isLooping;
 }
 
+- (void)setSpeed:(double)speed {
+  _player.rate = (speed < 0.0) ? 0.0 : ((speed > 3.0) ? 3.0 : speed);
+}
+
 - (void)setVolume:(double)volume {
   _player.volume = (float)((volume < 0.0) ? 0.0 : ((volume > 1.0) ? 1.0 : volume));
 }
@@ -530,6 +536,9 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
       result(nil);
     } else if ([@"setLooping" isEqualToString:call.method]) {
       [player setIsLooping:[argsMap[@"looping"] boolValue]];
+      result(nil);
+    } else if ([@"setSpeed" isEqualToString:call.method]) {
+      [player setSpeed:[[argsMap objectForKey:@"speed"] doubleValue]];
       result(nil);
     } else if ([@"setVolume" isEqualToString:call.method]) {
       [player setVolume:[argsMap[@"volume"] doubleValue]];
