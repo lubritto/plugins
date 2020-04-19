@@ -122,7 +122,7 @@ class VideoPlayerValue {
     List<DurationRange> buffered,
     bool isPlaying,
     bool isLooping,
-    bool speed,
+    double speed,
     bool isBuffering,
     double volume,
     String errorDescription,
