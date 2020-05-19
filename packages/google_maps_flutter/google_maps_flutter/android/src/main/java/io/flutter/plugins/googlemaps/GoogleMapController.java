@@ -23,6 +23,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
@@ -59,26 +60,17 @@ final class GoogleMapController
     implements Application.ActivityLifecycleCallbacks,
         DefaultLifecycleObserver,
         ActivityPluginBinding.OnSaveInstanceStateListener,
-        GoogleMap.OnCameraIdleListener,
-        GoogleMap.OnCameraMoveListener,
-        GoogleMap.OnCameraMoveStartedListener,
-        GoogleMap.OnInfoWindowClickListener,
-        GoogleMap.OnMarkerClickListener,
-        GoogleMap.OnPolygonClickListener,
-        GoogleMap.OnPolylineClickListener,
-        GoogleMap.OnCircleClickListener,
         GoogleMapOptionsSink,
         MethodChannel.MethodCallHandler,
         OnMapReadyCallback,
-        GoogleMap.OnMapClickListener,
-        GoogleMap.OnMapLongClickListener,
-        GoogleMap.OnMarkerDragListener,
+        GoogleMapListener,
         PlatformView {
 
   private static final String TAG = "GoogleMapController";
   private final int id;
   private final AtomicInteger activityState;
   private final MethodChannel methodChannel;
+  private final GoogleMapOptions options;
   private final MapView mapView;
   private GoogleMap googleMap;
   private boolean trackCameraPosition = false;
@@ -120,6 +112,7 @@ final class GoogleMapController
     this.id = id;
     this.context = context;
     this.activityState = activityState;
+    this.options = options;
     this.mapView = new MapView(context, options);
     this.density = context.getResources().getDisplayMetrics().density;
     methodChannel = new MethodChannel(binaryMessenger, "plugins.flutter.io/google_maps_" + id);
@@ -204,16 +197,7 @@ final class GoogleMapController
       mapReadyResult.success(null);
       mapReadyResult = null;
     }
-    googleMap.setOnCameraMoveStartedListener(this);
-    googleMap.setOnCameraMoveListener(this);
-    googleMap.setOnCameraIdleListener(this);
-    googleMap.setOnMarkerClickListener(this);
-    googleMap.setOnMarkerDragListener(this);
-    googleMap.setOnPolygonClickListener(this);
-    googleMap.setOnPolylineClickListener(this);
-    googleMap.setOnCircleClickListener(this);
-    googleMap.setOnMapClickListener(this);
-    googleMap.setOnMapLongClickListener(this);
+    setGoogleMapListener(this);
     updateMyLocationSettings();
     markersController.setGoogleMap(googleMap);
     polygonsController.setGoogleMap(googleMap);
@@ -401,6 +385,11 @@ final class GoogleMapController
           result.success(googleMap.getUiSettings().isZoomGesturesEnabled());
           break;
         }
+      case "map#isLiteModeEnabled":
+        {
+          result.success(options.getLiteMode());
+          break;
+        }
       case "map#isZoomControlsEnabled":
         {
           result.success(googleMap.getUiSettings().isZoomControlsEnabled());
@@ -544,8 +533,21 @@ final class GoogleMapController
     }
     disposed = true;
     methodChannel.setMethodCallHandler(null);
-    mapView.onDestroy();
+    setGoogleMapListener(null);
     getApplication().unregisterActivityLifecycleCallbacks(this);
+  }
+
+  private void setGoogleMapListener(@Nullable GoogleMapListener listener) {
+    googleMap.setOnCameraMoveStartedListener(listener);
+    googleMap.setOnCameraMoveListener(listener);
+    googleMap.setOnCameraIdleListener(listener);
+    googleMap.setOnMarkerClickListener(listener);
+    googleMap.setOnMarkerDragListener(listener);
+    googleMap.setOnPolygonClickListener(listener);
+    googleMap.setOnPolylineClickListener(listener);
+    googleMap.setOnCircleClickListener(listener);
+    googleMap.setOnMapClickListener(listener);
+    googleMap.setOnMapLongClickListener(listener);
   }
 
   // @Override
@@ -754,6 +756,12 @@ final class GoogleMapController
     googleMap.getUiSettings().setZoomGesturesEnabled(zoomGesturesEnabled);
   }
 
+  /** This call will have no effect on already created map */
+  @Override
+  public void setLiteModeEnabled(boolean liteModeEnabled) {
+    options.liteMode(liteModeEnabled);
+  }
+
   @Override
   public void setMyLocationEnabled(boolean myLocationEnabled) {
     if (this.myLocationEnabled == myLocationEnabled) {
@@ -899,3 +907,16 @@ final class GoogleMapController
     this.buildingsEnabled = buildingsEnabled;
   }
 }
+
+interface GoogleMapListener
+    extends GoogleMap.OnCameraIdleListener,
+        GoogleMap.OnCameraMoveListener,
+        GoogleMap.OnCameraMoveStartedListener,
+        GoogleMap.OnInfoWindowClickListener,
+        GoogleMap.OnMarkerClickListener,
+        GoogleMap.OnPolygonClickListener,
+        GoogleMap.OnPolylineClickListener,
+        GoogleMap.OnCircleClickListener,
+        GoogleMap.OnMapClickListener,
+        GoogleMap.OnMapLongClickListener,
+        GoogleMap.OnMarkerDragListener {}
